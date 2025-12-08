@@ -1,4 +1,3 @@
-import type { NextAuthConfig } from 'next-auth';
 import Google from 'next-auth/providers/google';
 
 export default {
@@ -24,4 +23,4 @@ export default {
     signIn: '/auth/signin', // Custom sign-in page
     error: '/auth/error', // Error page for authentication errors
   },
-} satisfies NextAuthConfig;
+};
