@@ -1,15 +1,22 @@
 "use client";
 
 import { Share2, Copy, Download, Check, Twitter, Linkedin, MessageCircle } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { FaTwitter, FaLinkedin, FaWhatsapp } from "react-icons/fa";
 
 export default function ClientBlogActions({ blog }: { blog: any }) {
     const [copied, setCopied] = useState(false);
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-    const shareUrl = `${appUrl}/blog/${blog.id}`;
+    const [shareUrl, setShareUrl] = useState("");
+
+    // Use useEffect to get the actual window location on the client
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            setShareUrl(`${window.location.origin}/blog/${blog.id}`);
+        }
+    }, [blog.id]);
+
     const shareText = `${blog.title} - ${blog.subtitle}`;
 
     const copyToClipboard = () => {

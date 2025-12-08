@@ -21,12 +21,24 @@ const handler = NextAuth({
   callbacks: {
     async session({ session, user }) {
       if (session.user) {
-        session.user.id = user.id;
+        session.user.id = (user as any).id;
       }
       return session;
     },
   },
   secret: process.env.NEXTAUTH_SECRET,
+  debug: true, // Enable debug messages for auth issues
+  logger: {
+    error(code, metadata) {
+      console.error('NextAuth Error:', code, metadata)
+    },
+    warn(code) {
+      console.warn('NextAuth Warning:', code)
+    },
+    debug(code, metadata) {
+      console.log('NextAuth Debug:', code, metadata)
+    }
+  }
 });
 
 export { handler as GET, handler as POST };

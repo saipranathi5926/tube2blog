@@ -218,7 +218,10 @@ Requirements:
     // 3. Persist to Database
     // Helper to get placeholder image
     const getPlaceholderImage = (keyword: string) => {
-      return `https://source.unsplash.com/1600x900/?${encodeURIComponent(keyword)}`;
+      // Use Pollinations.ai for AI-generated images (free, no key required)
+      // Format: https://image.pollinations.ai/prompt/[description]
+      const cleanKeyword = keyword.trim().replace(/\s+/g, '-');
+      return `https://image.pollinations.ai/prompt/cinematic-tech-blog-illustration-${encodeURIComponent(cleanKeyword)}?width=1600&height=900&nologo=true`;
     };
 
     const coverImage = getPlaceholderImage(blog.tags?.[0] || "technology");

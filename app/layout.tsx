@@ -24,7 +24,7 @@ export default function RootLayout({
       <body className={`${inter.className} min-h-screen bg-white`}>
         <SessionProvider>
           <Navbar />
-          <main className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+          <main className="pt-16 max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
             {children}
           </main>
           <Toaster position="top-right" />
