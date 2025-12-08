@@ -10,8 +10,8 @@ const inter = Inter({ subsets: ["latin"] });
 import Navbar from '@/components/layout/Navbar';
 
 export const metadata: Metadata = {
-  title: "Tube2Blog - Convert YouTube Videos to Blog Posts",
-  description: "Transform any YouTube video into a well-structured, SEO-optimized blog post in seconds.",
+  title: "Flow Forge AI - Convert YouTube Videos to Blog Posts",
+  description: "Transform any YouTube video into a well-structured, SEO-optimized blog post in seconds with Flow Forge AI.",
 };
 
 export default function RootLayout({

@@ -1,23 +1,22 @@
 "use client";
 
-import { Share2, Copy, Download, Check } from "lucide-react";
+import { Share2, Copy, Download, Check, Twitter, Linkedin, MessageCircle } from "lucide-react";
 import { useState } from "react";
 import toast from "react-hot-toast";
+import { FaTwitter, FaLinkedin, FaWhatsapp } from "react-icons/fa";
 
 export default function ClientBlogActions({ blog }: { blog: any }) {
     const [copied, setCopied] = useState(false);
 
-    const copyToClipboard = () => {
-        const text = `${blog.title}\n\n${blog.subtitle}\n\n${blog.sections.map((s: any) => `### ${s.heading}\n${s.content}`).join("\n\n")}\n\n### Conclusion\n${blog.conclusion}`;
-        navigator.clipboard.writeText(text);
-        setCopied(true);
-        toast.success("Content copied to clipboard!");
-        setTimeout(() => setCopied(false), 2000);
-    };
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const shareUrl = `${appUrl}/blog/${blog.id}`;
+    const shareText = `${blog.title} - ${blog.subtitle}`;
 
-    const shareLink = () => {
-        navigator.clipboard.writeText(window.location.href);
+    const copyToClipboard = () => {
+        navigator.clipboard.writeText(shareUrl);
+        setCopied(true);
         toast.success("Link copied to clipboard!");
+        setTimeout(() => setCopied(false), 2000);
     };
 
     const downloadMarkdown = () => {
@@ -34,19 +33,51 @@ export default function ClientBlogActions({ blog }: { blog: any }) {
         toast.success("Markdown downloaded!");
     };
 
+    const shareToTwitter = () => {
+        const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
+        window.open(url, "_blank");
+    };
+
+    const shareToLinkedIn = () => {
+        const url = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`;
+        window.open(url, "_blank");
+    };
+
+    const shareToWhatsApp = () => {
+        const url = `https://wa.me/?text=${encodeURIComponent(`${shareText} ${shareUrl}`)}`;
+        window.open(url, "_blank");
+    };
+
     return (
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
             <button
-                onClick={shareLink}
-                className="p-2 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                title="Share Link"
+                onClick={shareToTwitter}
+                className="p-2 text-slate-500 hover:text-blue-400 hover:bg-blue-50 rounded-lg transition-colors"
+                title="Share on Twitter"
             >
-                <Share2 className="w-5 h-5" />
+                <FaTwitter className="w-5 h-5" />
             </button>
+            <button
+                onClick={shareToLinkedIn}
+                className="p-2 text-slate-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+                title="Share on LinkedIn"
+            >
+                <FaLinkedin className="w-5 h-5" />
+            </button>
+            <button
+                onClick={shareToWhatsApp}
+                className="p-2 text-slate-500 hover:text-green-500 hover:bg-green-50 rounded-lg transition-colors"
+                title="Share on WhatsApp"
+            >
+                <FaWhatsapp className="w-5 h-5" />
+            </button>
+
+            <div className="w-px h-6 bg-slate-200 mx-1" />
+
             <button
                 onClick={copyToClipboard}
                 className="p-2 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                title="Copy Content"
+                title="Copy Link"
             >
                 {copied ? <Check className="w-5 h-5 text-green-500" /> : <Copy className="w-5 h-5" />}
             </button>

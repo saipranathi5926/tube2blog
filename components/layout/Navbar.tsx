@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useSession } from 'next-auth/react';
+import { useSession, signIn } from 'next-auth/react';
 import UserProfile from '../auth/UserProfile';
 
 export default function Navbar() {
@@ -12,21 +12,21 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex items-center">
-            <Link href="/" className="text-xl font-bold text-gray-900">
-              Your App Name
+            <Link href="/" className="text-xl font-bold text-indigo-600 flex items-center gap-2">
+              <span>Flow Forge AI</span>
             </Link>
           </div>
-          
+
           <div className="flex items-center">
             {status === 'authenticated' ? (
               <UserProfile />
             ) : (
-              <Link
-                href="/auth/signin"
+              <button
+                onClick={() => signIn()}
                 className="text-sm font-medium text-indigo-600 hover:text-indigo-500"
               >
                 Sign in
-              </Link>
+              </button>
             )}
           </div>
         </div>
