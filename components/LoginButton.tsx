@@ -3,19 +3,9 @@
 import { signIn, signOut, useSession } from 'next-auth/react';
 import { Button } from './ui/button';
 import { Loader2, LogIn, LogOut } from 'lucide-react';
-import { Session } from 'next-auth';
-
-interface UserSession extends Session {
-  user?: {
-    id?: string;
-    name?: string | null;
-    email?: string | null;
-    image?: string | null;
-  };
-}
 
 export default function LoginButton() {
-  const { data: session, status } = useSession() as { data: UserSession | null, status: string };
+  const { data: session, status } = useSession();
 
   if (status === 'loading') {
     return (
