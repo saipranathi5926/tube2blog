@@ -6,6 +6,7 @@
 }
 
 :root {
+  --navbar-height: 64px;
   --background: #020617; /* slate-950 */
   --foreground: #f1f5f9; /* slate-100 */
 }

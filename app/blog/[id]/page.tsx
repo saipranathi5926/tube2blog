@@ -33,7 +33,7 @@ export default async function BlogPage({ params }: { params: Promise<{ id: strin
     const readingTime = Math.ceil(totalWords / 200);
 
     return (
-        <div className="min-h-screen bg-white text-slate-900 pb-20 -mt-6 -mx-4 sm:-mx-6 lg:-mx-8">
+        <div className="min-h-screen bg-white text-slate-900 pb-20 pt-16 -mx-4 sm:-mx-6 lg:-mx-8">
             {/* Hero Section */}
             <div className="relative h-[60vh] w-full bg-slate-900">
                 {blog.coverImage ? (
