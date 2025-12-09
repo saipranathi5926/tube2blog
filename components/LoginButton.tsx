@@ -22,7 +22,7 @@ export default function LoginButton() {
         <span className="text-sm text-slate-300">
           {session.user?.name || session.user?.email}
         </span>
-        <Button variant="outline" onClick={() => signOut()}>
+        <Button onClick={() => signOut()}>
           <LogOut className="mr-2 h-4 w-4" />
           Sign out
         </Button>
