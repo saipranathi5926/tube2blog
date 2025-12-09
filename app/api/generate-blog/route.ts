@@ -99,6 +99,23 @@ export async function POST(req: NextRequest) {
         console.error("YouTube Data API failed:", apiErr);
       }
 
+      // Try oEmbed (Official public endpoint, no key needed)
+      try {
+        if (!videoTitle) { // Only if previous methods failed
+          console.log("Attempting oEmbed fetch...");
+          const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
+          const oembedRes = await fetch(oembedUrl);
+          if (oembedRes.ok) {
+            const oembedData = await oembedRes.json();
+            videoTitle = oembedData.title || "";
+            // oEmbed doesn't give description, but title is enough to proceed
+            console.log("Metadata fetched via oEmbed");
+          }
+        }
+      } catch (oembedErr) {
+        console.error("oEmbed failed:", oembedErr);
+      }
+
       // Fallback: Fetch page directly if youtubei.js failed completely
       try {
         console.log("Attempting direct page fetch fallback...");
