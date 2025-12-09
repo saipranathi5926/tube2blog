@@ -12,6 +12,10 @@ function extractVideoId(url: string): string | null {
     if (u.pathname.includes("/shorts/")) {
       return u.pathname.split("/shorts/")[1].split("/")[0];
     }
+    // handle live
+    if (u.pathname.includes("/live/")) {
+      return u.pathname.split("/live/")[1].split("/")[0];
+    }
     return null;
   } catch {
     return null;
