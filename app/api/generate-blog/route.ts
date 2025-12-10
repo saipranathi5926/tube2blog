@@ -41,6 +41,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const cleanUrl = `https://www.youtube.com/watch?v=${videoId}`;
+
     // 1. Fetch transcript or fallback to metadata
     let transcriptText = "";
     let videoTitle = "";
@@ -76,9 +78,7 @@ export async function POST(req: NextRequest) {
       // Try YouTube Data API v3 (Official)
       try {
         console.log("Attempting to fetch metadata via YouTube Data API v3...");
-        const apiKey = process.env.GEMINI_API_KEY; // Using GEMINI_API_KEY as requested/configured, assuming it works for YouTube API too or user meant to use a specific one. 
-        // Note: User mentioned YT_API_KEY in prompt, but code uses GEMINI_API_KEY. I should check if YT_API_KEY exists or use GEMINI_API_KEY if that's what's intended. 
-        // Let's check env vars later. For now, I'll stick to what was there but add a fallback check.
+        const apiKey = process.env.GEMINI_API_KEY;
 
         if (apiKey) {
           const apiUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id=${videoId}&key=${apiKey}`;
@@ -103,7 +103,8 @@ export async function POST(req: NextRequest) {
       try {
         if (!videoTitle) { // Only if previous methods failed
           console.log("Attempting oEmbed fetch...");
-          const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
+          // Use cleanUrl here as it is more reliable
+          const oembedUrl = `https://www.youtube.com/oembed?url=${cleanUrl}&format=json`;
           const oembedRes = await fetch(oembedUrl);
           if (oembedRes.ok) {
             const oembedData = await oembedRes.json();
@@ -118,20 +119,23 @@ export async function POST(req: NextRequest) {
 
       // Fallback: Fetch page directly if youtubei.js failed completely
       try {
-        console.log("Attempting direct page fetch fallback...");
-        const response = await fetch(youtubeUrl, {
-          headers: {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-          }
-        });
-        const html = await response.text();
+        if (!videoTitle) {
+          console.log("Attempting direct page fetch fallback...");
+          console.log("Fetching URL:", cleanUrl);
+          const response = await fetch(cleanUrl, {
+            headers: {
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            }
+          });
+          const html = await response.text();
 
-        // Simple regex extract (robust enough for fallback)
-        const titleMatch = html.match(/<title>(.*?)<\/title>/);
-        if (titleMatch) videoTitle = titleMatch[1].replace(" - YouTube", "");
+          // Simple regex extract (robust enough for fallback)
+          const titleMatch = html.match(/<title>(.*?)<\/title>/);
+          if (titleMatch) videoTitle = titleMatch[1].replace(" - YouTube", "");
 
-        const descMatch = html.match(/<meta name="description" content="(.*?)">/);
-        if (descMatch) videoDescription = descMatch[1];
+          const descMatch = html.match(/<meta name="description" content="(.*?)">/);
+          if (descMatch) videoDescription = descMatch[1];
+        }
 
       } catch (fetchErr) {
         console.error("Direct fetch fallback failed:", fetchErr);
