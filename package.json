@@ -4,9 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "prisma generate && prisma db push && next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:local": "node scripts/db-switch.js local && npx prisma generate",
+    "db:prod": "node scripts/db-switch.js prod && npx prisma generate"
   },
   "dependencies": {
     "@auth/core": "^0.41.0",
