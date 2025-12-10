@@ -66,10 +66,28 @@ export async function POST(req: NextRequest) {
             .map((segment: any) => segment.snippet.text)
             .join(" ");
           isTranscriptAvailable = true;
-          console.log("Transcript fetched successfully, length:", transcriptText.length);
+          console.log("Transcript fetched successfully via youtubei.js, length:", transcriptText.length);
         }
       } catch (transcriptErr) {
-        console.log("Transcript not available via youtubei.js, falling back to metadata");
+        console.log("youtubei.js transcript failed:", transcriptErr);
+
+        // Secondary Fallback: youtube-transcript library
+        try {
+          console.log("Attempting fallback with youtube-transcript...");
+          // Dynamically import to avoid top-level issues if any
+          const { YoutubeTranscript } = require('youtube-transcript');
+          const ytTranscript = await YoutubeTranscript.fetchTranscript(videoId, { lang: 'en' });
+
+          if (ytTranscript && ytTranscript.length > 0) {
+            transcriptText = ytTranscript.map((item: any) => item.text).join(' ');
+            isTranscriptAvailable = true;
+            console.log("Transcript fetched via youtube-transcript, length:", transcriptText.length);
+          } else {
+            console.log("youtube-transcript returned empty.");
+          }
+        } catch (ytErr) {
+          console.log("youtube-transcript fallback failed:", ytErr);
+        }
       }
 
     } catch (err: any) {
@@ -149,7 +167,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 2. Call Gemini - Initialize genAI here to pick up latest env vars
+    // 2. Call Gemini
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       console.error("GEMINI_API_KEY not set");
@@ -159,111 +177,141 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    console.log("Using API key:", apiKey.substring(0, 10) + "...");
     const genAI = new GoogleGenerativeAI(apiKey);
-    // Use gemini-2.5-flash as it is available for this key
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-    let prompt = "";
+    const systemPrompt = `
+You are an autonomous blog-generation engine.
+
+ABSOLUTE RULE:
+The blog title will be rendered separately as a cover.
+DO NOT repeat the title or any part of it inside the blog content.
+
+INPUT:
+You generate structured English blog content from any source or language.
+
+OUTPUT RULES:
+1. The title must appear ONLY in the "title" field.
+2. The first section must start directly with meaningful content.
+3. Do NOT repeat, paraphrase, or continue the title in:
+   - section headings
+   - first paragraph
+   - introduction
+4. Assume the cover already displays:
+   - title
+   - date
+   - reading time
+   - cover image
+5. Handle non-English input by translating to fluent English internally.
+6. Generate high-quality AI image prompts for the cover and each section.
+
+STRUCTURE (STRICT JSON):
+
+{
+  "title": "Complete blog title",
+  "subtitle": "Engaging Subtitle",
+  "coverImagePrompt": "Descriptive prompt for the cover image only (NO text in image)",
+  "sections": [
+    {
+      "heading": "First section heading (not similar to title)",
+      "content": "Blog content that does NOT restate the title",
+      "imagePrompt": "Image relevant to this section (NO text in image)"
+    }
+  ],
+  "conclusion": "Clear closing without restating the title",
+  "tags": ["tag1", "tag2"]
+}
+
+IMPORTANT:
+- Do not start the blog with the title.
+- Do not reference the cover.
+- Do not repeat words from the title in the first heading.
+- Output valid JSON only.
+- No markdown formatting.
+`.trim();
+
+    let userContent = "";
     if (isTranscriptAvailable) {
-      prompt = `
-You are an expert blog writer. Convert the following YouTube transcript into a well-structured blog post.
-
-Requirements:
-- Writing style: ${style}
-- Target audience: ${audience}
-- Desired length: ${length}
-- Output JSON with this structure:
-{
-  "title": "Catchy Title",
-  "subtitle": "Engaging Subtitle",
-  "sections": [
-    { "heading": "Section Heading", "content": "Section content..." }
-  ],
-  "conclusion": "Concluding thoughts",
-  "tags": ["tag1", "tag2"]
-}
-
-Transcript:
+      userContent = `
+TRANSCRIPT (Primary Source):
 ${transcriptText}
-      `.trim();
+
+CONTEXT (Title/Description):
+Title: ${videoTitle}
+Description: ${videoDescription}
+
+Specifications:
+- Style: ${style}
+- Audience: ${audience}
+- Length: ${length}
+        `.trim();
     } else {
-      console.log("Generating blog from metadata only");
-      prompt = `
-You are an expert blog writer. I need you to write a blog post about a YouTube video, but I only have the title and description. 
-Please do your best to create a compelling blog post based on this limited information. You can infer reasonable details but don't hallucinate wild claims.
+      userContent = `
+NO TRANSCRIPT AVAILABLE.
+Generate blog based on Metadata ONLY.
 
-Video Title: ${videoTitle}
-Video Description: ${videoDescription}
+Metadata:
+Title: ${videoTitle}
+Description: ${videoDescription}
 
-Requirements:
-- Writing style: ${style}
-- Target audience: ${audience}
-- Desired length: ${length}
-- Output JSON with this structure:
-{
-  "title": "Catchy Title",
-  "subtitle": "Engaging Subtitle",
-  "sections": [
-    { "heading": "Section Heading", "content": "Section content..." }
-  ],
-  "conclusion": "Concluding thoughts",
-  "tags": ["tag1", "tag2"]
-}
-      `.trim();
+Specifications:
+- Style: ${style}
+- Audience: ${audience}
+- Length: ${length}
+        `.trim();
     }
 
-    const result = await model.generateContent(prompt);
+    const result = await model.generateContent([systemPrompt, userContent]);
     const response = await result.response;
     const text = response.text();
 
-    // The model will return JSON-like text; attempt to parse
-    // If it contains extra text, try to extract JSON part:
+    console.log("AI Response length:", text.length);
+
+    // Parse JSON
     let blog;
     try {
-      const first = text.indexOf("{");
-      const last = text.lastIndexOf("}");
+      // Clean potential markdown code blocks
+      const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+
+      const first = cleanText.indexOf("{");
+      const last = cleanText.lastIndexOf("}");
       if (first !== -1 && last !== -1) {
-        const jsonStr = text.slice(first, last + 1);
+        const jsonStr = cleanText.slice(first, last + 1);
         blog = JSON.parse(jsonStr);
       } else {
-        throw new Error("No JSON found");
+        throw new Error("No JSON object found in response");
       }
     } catch (err) {
-      console.error("JSON parse error", err, text);
+      console.error("JSON parse error:", err);
+      console.log("Raw text:", text);
       return NextResponse.json(
-        {
-          error:
-            "Failed to parse AI response. Try again with a shorter video.",
-        },
+        { error: "Failed to generate valid blog content. Please try again." },
         { status: 500 }
       );
     }
 
-    // 3. Persist to Database
-    // Helper to get placeholder image
-    const getPlaceholderImage = (keyword: string) => {
-      // Use Pollinations.ai for AI-generated images (free, no key required)
-      // Format: https://image.pollinations.ai/prompt/[description]
-      const cleanKeyword = keyword.trim().replace(/\s+/g, '-');
-      return `https://image.pollinations.ai/prompt/cinematic-tech-blog-illustration-${encodeURIComponent(cleanKeyword)}?width=1600&height=900&nologo=true`;
+    // 3. Persist to Database with Dynamic Images
+    const generateImageUrl = (prompt: string) => {
+      // Use Pollinations.ai with the specific AI-generated prompt
+      const encodedPrompt = encodeURIComponent(prompt.substring(0, 500)); // Limit length slightly for URL safety
+      return `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1600&height=900&nologo=true&model=flux`;
     };
 
-    const coverImage = getPlaceholderImage(blog.tags?.[0] || "technology");
+    const coverImageUrl = generateImageUrl(blog.coverImagePrompt || blog.title + " blog cover");
 
     const savedBlog = await prisma.blog.create({
       data: {
         title: blog.title,
-        subtitle: blog.subtitle,
-        conclusion: blog.conclusion,
+        subtitle: blog.subtitle || "",
+        conclusion: blog.conclusion || "",
         youtubeUrl: youtubeUrl,
-        coverImage: coverImage,
+        coverImage: coverImageUrl,
         sections: {
           create: blog.sections.map((section: any, index: number) => ({
             heading: section.heading,
             content: section.content,
             order: index,
-            imageUrl: getPlaceholderImage(section.heading.split(" ").slice(0, 2).join(" ")) // Simple keyword extraction
+            imageUrl: generateImageUrl(section.imagePrompt || section.heading + " illustration")
           }))
         }
       }

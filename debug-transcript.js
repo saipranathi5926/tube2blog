@@ -2,7 +2,7 @@ const { YoutubeTranscript } = require('youtube-transcript');
 const fs = require('fs');
 
 async function testFetch() {
-    const videoId = 'jNQXAC9IVRw';
+    const videoId = 'M65hkvZVIW0';
 
     try {
         const response = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
